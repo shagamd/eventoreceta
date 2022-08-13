@@ -3,20 +3,66 @@ import "./App.css";
 import Logo from "./images/logo-1.png";
 import { FaFacebookF, FaInstagram, FaYoutube } from "react-icons/fa";
 import Swal from "sweetalert2";
+import axios from "axios";
+import { configData } from "./config/config";
 import { useEffect } from "react";
 import { useState } from "react";
 
 function App() {
   const [documento, setDocumento] = useState("");
+  const [idEmpelado, setIdEmpleado] = useState("");
+  const [nombreEmpelado, setNombreEmpleado] = useState("");
+  const [spinner, setSpinner] = useState(false);
+  const [mostarPpal, setMostrarPpal] = useState(true);
+
   useEffect(() => {
-    // $("#consultar").on("click", consultarInformacionEmpleado);
     // $("#agregar").on("click", habilitarFormulario);
     // $("#guardar").on("click", guardarInfoParticipante);
   }, []);
 
   const consultarInformacionEmpleado = async () => {
-    console.log("dio enter");
+    let patt = new RegExp(/^[A-Za-z0-9\s]+$/g);
+
+    if (documento.trim() === "") {
+      Swal.fire({
+        icon: "warning",
+        html: "El n&uacute;mero de Identificaci&oacute;n es Requerido para iniciar el proceso.",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+      return;
+    }
+
+    let resultado = patt.test(documento);
+    if (!resultado) {
+      Swal.fire({
+        icon: "warning",
+        html: "El n&uacute;mero de Identificaci&oacute;n contiene caracteres no validos.",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+      return;
+    }
+
+    setSpinner(true);
+
+    const response = await axios.post(`${configData.hostApi}/evento/consultarEmpleados`, { documento });
+    setSpinner(false);
+    if (!response.data.success) {
+      Swal.fire({
+        icon: "warning",
+        html: response.data.EMensaje,
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    } else {
+      const infoEmpleado = response.data.infoEmpleado;
+      setIdEmpleado(infoEmpleado.Cedula);
+      setNombreEmpleado(infoEmpleado.Nombre);
+      setMostrarPpal(false);
+    }
   };
+
   return (
     <>
       <div className="container-fluid">
@@ -60,7 +106,7 @@ function App() {
             </div>
           </div>
         </nav>
-        <div className="card text-center mt-4 mb-4" id="contenedorPrincipal">
+        <div className={"card text-center mt-4 mb-4 " + (!mostarPpal && "oculto")}>
           <div className="card-body">
             <h2 className="titulos cabeceraCard text-center">BIENVENIDO AL REGISTRO DE PARTICIPANTES</h2>
             <h3 className="titulos cabeceraCard text-center">¡Evento de la Receta!</h3>
@@ -79,17 +125,17 @@ function App() {
               </div>
             </div>
             <div className="text-center">
-              <button type="button" className="btn btn-primario" id="consultar">
+              <button type="button" className="btn btn-primario" onClick={() => consultarInformacionEmpleado()}>
                 Consultar
               </button>
             </div>
           </div>
         </div>
         <div className="container text-center mt-4">
-          <p className="cuerpoCardPeque oculto" id="inicio">
+          <p className={"cuerpoCardPeque " + (mostarPpal && "oculto")}>
             Hola!,{" "}
             <b>
-              <span id="nombreEmpleado"></span>
+              <span>{nombreEmpelado}</span>
             </b>{" "}
             ¿desea agregar un participante?{" "}
             <button type="button" className="btn btn-primario" id="agregar">
@@ -186,9 +232,7 @@ function App() {
           </div>
         </div>
       </div>
-      <div className="loading oculto" id="spinner">
-        Loading
-      </div>
+      <div className={"loading " + (spinner ? "" : "oculto")}>Loading</div>
     </>
   );
 }
